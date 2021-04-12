@@ -1,8 +1,7 @@
-from django.shortcuts import get_object_or_404, render
-from django.http import HttpResponse
-from django.http import Http404
+from django.shortcuts import get_object_or_404, render, redirect
+from django.http import HttpResponse, HttpResponseRedirect
 from django.template import loader
-from .models import Question
+from .models import Choice, Question
 
 # Create your views here.
 def index(req):
@@ -12,12 +11,23 @@ def index(req):
     return render(req, 'polls/index.html', context)
 
 def detail(req, question_id):
-    question = get_object_or_404(Question, pk=question_id)
+    question = get_object_or_404(Question, pk = question_id)
     return render(req, 'polls/detail.html', {'question' : question})
 
-def results(req, question_id):
-    response = "You're looking at the results of question %s."
-    return HttpResponse(response % question_id)
-
 def vote(req, question_id):
-    return HttpResponse("You're voting on question %s." % question_id)
+    question = get_object_or_404(Question, pk = question_id)
+    try:
+        selected_choice = question.choice_set.get(pk = req.POST['choice'])
+    except (KeyError, Choice.DoesNotExist):
+        return render(req, 'polls/detail.html', {
+            'question' : question,
+            'error_message' : "You didn't select a choice.",
+        })
+    else:
+        selected_choice.votes += 1
+        selected_choice.save()
+        return redirect('polls:results', question_id)
+
+def results(req, question_id):
+    question = get_object_or_404(Question, pk = question_id)
+    return render(req, 'polls/results.html', {'question' : question})
